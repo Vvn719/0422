@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>人員管理</title>
+</head>
+
+<body>
+  <h1>人員管理系統</h1>
+  <input type="text" id="newName" placeholder="輸入姓名">
+  <button onclick="addPerson()">新增</button>
+  <ul id="nameList"></ul>
+  <p>總分：<span id="totalScore">0</span></p>
+  <p>總感染分數：<span id="totalInfectionScore">0</span></p>
+  <button onclick="undo()">回上一個步驟</button>
+  <button onclick="resetAll()">全部重置</button>
+  <button onclick="resetScores()">只重置分數</button>
+
+  <script>
+    let people = [];
+    let previousState = [];
+
+    // 檢查是否有本地存儲的資料
+    const storedPeople = localStorage.getItem("people");
+    if (storedPeople) {
+      people = JSON.parse(storedPeople);
+      render();
+    }
+
+    function addPerson() {
+      const newNameInput = document.getElementById("newName");
+      const newName = newNameInput.value.trim();
+      if (!newName) {
+        alert("請輸入姓名");
+        return;
+      }
+
+      const newPerson = {
+        name: newName,
+        score: 0,
+        infectionScore: 0,
+        infected: false
+      };
+
+      previousState.push(JSON.stringify(people)); // 將當前狀態加入上一個步驟
+      people.push(newPerson);
+      newNameInput.value = "";
+
+      saveDataToLocalStorage();
+      render();
+    }
+
+    function saveDataToLocalStorage() {
+      localStorage.setItem("people", JSON.stringify(people));
+    }
+
+    function render() {
+      const nameList = document.getElementById("nameList");
+      nameList.innerHTML = "";
+
+      people.forEach(person => {
+        const listItem = document.createElement("li");
+        listItem.textContent = `${person.name} - 個人分數: ${person.score}, 個人感染分數: ${person.infectionScore}`;
+
+        const addScoreButton = document.createElement("button");
+        addScoreButton.textContent = "加分";
+        addScoreButton.onclick = () => {
+          if (!person.infected) {
+            person.score++;
+            updateTotalScore();
+          } else {
+            person.infectionScore++;
+            updateTotalInfectionScore();
+          }
+          previousState.push(JSON.stringify(people)); // 將當前狀態加入上一個步驟
+          saveDataToLocalStorage();
+          render();
+        };
+
+        const subtractScoreButton = document.createElement("button");
+        subtractScoreButton.textContent = "扣分";
+        subtractScoreButton.onclick = () => {
+          if (!person.infected) {
+            person.score--;
+            updateTotalScore();
+          } else {
+            person.infectionScore++;
+            updateTotalInfectionScore();
+          }
+          previousState.push(JSON.stringify(people)); // 將當前狀態加入上一個步驟
+          saveDataToLocalStorage();
+          render();
+        };
+
+        const infectButton = document.createElement("button");
+        infectButton.textContent = "感染";
+        infectButton.onclick = () => {
+          person.infected = true;
+          person.infectionScore++;
+          updateTotalInfectionScore();
+          previousState.push(JSON.stringify(people)); // 將當前狀態加入上一個步驟
+          saveDataToLocalStorage();
+          render();
+        };
+
+        const cureButton = document.createElement("button");
+        cureButton.textContent = "解除感染";
+        cureButton.onclick = () => {
+          person.infected = false;
+          const cureScore = Math.floor(person.infectionScore / 2);
+          person.score += cureScore;
+          person.infectionScore = 0;
+          updateTotalInfectionScore();
+          updateTotalScore();
+          previousState.push(JSON.stringify(people)); // 將當前狀態加入上一個步驟
+          saveDataToLocalStorage();
+          render();
+        };
+
+        listItem.appendChild(addScoreButton);
+        listItem.appendChild(subtractScoreButton);
+        listItem.appendChild(infectButton);
+        listItem.appendChild(cureButton);
+
+        nameList.appendChild(listItem);
+      });
+
+      updateTotalScore();
+      updateTotalInfectionScore();
+    }
+
+    function updateTotalScore() {
+      const totalScoreSpan = document.getElementById("totalScore");
+      const totalScore = people.reduce((acc, person) => acc + person.score, 0);
+      totalScoreSpan.textContent = totalScore;
+    }
+
+    function updateTotalInfectionScore() {
+      const totalInfectionScoreSpan = document.getElementById("totalInfectionScore");
+      const totalInfectionScore = people.reduce((acc, person) => acc + person.infectionScore, 0);
+      totalInfectionScoreSpan.textContent = totalInfectionScore;
+    }
+
+    function resetAll() {
+      previousState.push(JSON.stringify(people)); // 將當前狀態加入上一個步驟
+      localStorage.removeItem("people");
+      people = [];
+      render();
+    }
+
+    function resetScores() {
+      previousState.push(JSON.stringify(people)); // 將當前狀態加入上一個步驟
+      people.forEach(person => {
+        person.score = 0;
+        person.infectionScore = 0;
+      });
+      saveDataToLocalStorage();
+      render();
+    }
+
+    function undo() {
+      if (previousState.length > 0) {
+        const prevState = previousState.pop();
+        people = JSON.parse(prevState);
+        saveDataToLocalStorage();
+        render();
+      }
+    }
+  </script>
+</body>
+
+</html>
